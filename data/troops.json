@@ -1,0 +1,62 @@
+{
+  "archer": {
+    "name": "Archer",
+    "symbol": "ARC",
+    "cost": 3,
+    "life": 4,
+    "attack": 2,
+    "defence": 1,
+    "damage": 2,
+    "movement": 2,
+    "attack_range": 3,
+    "abilities": []
+  },
+  "sword_infantry": {
+    "name": "Swordsman",
+    "symbol": "SWO",
+    "cost": 5,
+    "life": 6,
+    "attack": 4,
+    "defence": 3,
+    "damage": 3,
+    "movement": 2,
+    "attack_range": 1,
+    "abilities": []
+  },
+  "spear_infantry": {
+    "name": "Spearman",
+    "symbol": "SPE",
+    "cost": 4,
+    "life": 5,
+    "attack": 3,
+    "defence": 2,
+    "damage": 2,
+    "movement": 3,
+    "attack_range": 1,
+    "abilities": []
+  },
+  "knight": {
+    "name": "Knight",
+    "symbol": "KNI",
+    "cost": 7,
+    "life": 8,
+    "attack": 5,
+    "defence": 4,
+    "damage": 4,
+    "movement": 4,
+    "attack_range": 1,
+    "abilities": []
+  },
+  "crossbowman": {
+    "name": "Crossbowman",
+    "symbol": "CRO",
+    "cost": 6,
+    "life": 4,
+    "attack": 4,
+    "defence": 1,
+    "damage": 3,
+    "movement": 2,
+    "attack_range": 3,
+    "abilities": []
+  }
+}

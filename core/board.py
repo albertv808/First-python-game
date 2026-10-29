@@ -1,4 +1,5 @@
 from collections import deque
+from core.combat import resolve_attack
 
 
 class Board:
@@ -6,6 +7,7 @@ class Board:
         self.width = width
         self.height = height
         self.grid = [[None for _ in range(width)] for _ in range(height)]
+        self.last_combat_log = None
 
     def in_bounds(self, x, y):
         return 0 <= x < self.width and 0 <= y < self.height
@@ -25,6 +27,23 @@ class Board:
         piece.x, piece.y = x, y
         return True
 
+    def remove_piece(self, piece):
+        """Retira una peça del tauler si realment hi és."""
+        if piece is None:
+            return False
+
+        x, y = piece.x, piece.y
+
+        if not self.in_bounds(x, y):
+            return False
+
+        # Comprovar que la casella conté aquesta peça exacta.
+        if self.grid[y][x] is not piece:
+            return False
+
+        self.grid[y][x] = None
+        return True
+
     def move_piece(self, piece, x, y):
         if not self.in_bounds(x, y):
             return False
@@ -38,9 +57,7 @@ class Board:
         return True
 
     def attack(self, attacker, target):
-        damage = max(0, attacker.get_damage() - target.get_defence())
-
-        target.take_damage(damage, self)
+        return resolve_attack(attacker, target, self)
 
     def get_valid_moves(self, piece):
         if piece is None or not piece.is_alive:

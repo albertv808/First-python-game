@@ -15,7 +15,6 @@ def main():
 
     # 🎮 gestor de pantalles
     sm = ScreenManager(screen)
-
     # 👉 registrar totes les pantalles
     register_screens(sm)
 

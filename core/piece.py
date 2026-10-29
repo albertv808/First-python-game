@@ -56,18 +56,6 @@ class Piece:
         """
         return max(0, self.troop.defence + self._get_modifier("defence"))
 
-    def resolve_attack(self, target):
-        # 💥 dany total de la unitat atacant
-        damage = self.get_damage()
-
-        # 🛡 defensa del defensor
-        defence = target.get_defence()
-
-        # ⚔️ dany final
-        final_damage = max(0, damage - defence)
-
-        target.take_damage(final_damage)
-
     def take_damage(self, damage, board=None):
         if damage <= 0:
             return

@@ -30,14 +30,13 @@ class ScreenManager:
 
     def update(self, events):
         for event in events:
-
             if event.type == pygame.VIDEORESIZE:
                 self.handle_resize(event.w, event.h)
 
-            if self.current_screen and hasattr(self.current_screen, "handle_event"):
+            if self.current_screen:
                 self.current_screen.handle_event(event)
 
-        if self.current_screen and hasattr(self.current_screen, "update"):
+        if self.current_screen:
             self.current_screen.update()
 
     def draw(self):
@@ -52,3 +51,5 @@ class ScreenManager:
 
         if self.current_screen and hasattr(self.current_screen, "on_resize"):
             self.current_screen.on_resize(w, h)
+
+

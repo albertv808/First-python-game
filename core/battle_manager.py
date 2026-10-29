@@ -23,6 +23,7 @@ class BattleManager:
 
         self.game_state.current_player = self.current_player
         self.game_state.phase = "battle"
+        self.last_combat_log = None
 
     def get_enemy_player(self):
         return self.players[1 - self.current_player_index]
@@ -130,19 +131,22 @@ class BattleManager:
         if target.player == self.current_player:
             return False
 
-        self.board.attack(attacker, target)
+        # Executar l'atac i aplicar el dany.
+        damage = self.board.attack(attacker, target)
+
+        # Recuperar el registre detallat del combat.
+        self.last_combat_log = getattr(self.board, "last_combat_log", None)
+
+        if damage <= 0:
+            return False
 
         self.attacked_pieces.add(attacker)
 
+        # Activar les habilitats de l'atacant.
         for ability in attacker.abilities:
-            ability.on_attack(
-                attacker,
-                target,
-                self.game_state
-            )
+            ability.on_attack(attacker, target, self.game_state)
 
-        # Atacar no finalitza automàticament l'activació.
-        # El jugador encara haurà de finalitzar-la.
+        # Comprovar si la batalla ha acabat.
         self.check_victory()
 
         return True
@@ -158,6 +162,7 @@ class BattleManager:
 
         piece.has_acted = True
         self.selected_piece = None
+        self.last_combat_log = None
 
         self.check_victory()
 

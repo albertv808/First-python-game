@@ -1,15 +1,14 @@
 import pygame
 
+from screens.base_screen import BaseScreen
 from ui.layout import Layout
 from ui.button import Button
 from ui import theme
 
 
-class FinalScreen:
+class FinalScreen(BaseScreen):
     def __init__(self, screen_manager, screen, context=None):
-        self.sm = screen_manager
-        self.screen = screen
-        self.game_state = context
+        super().__init__(screen_manager, screen, context)
 
         self.layout = Layout(screen)
         self.build_ui()

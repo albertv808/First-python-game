@@ -1,26 +1,27 @@
 import pygame
 
 from core.troop import Troop
-
-from ui.layout import Layout
+from screens.base_screen import BaseScreen
+from ui import theme
+from ui.button import Button
 from ui.grid import Grid
+from ui.input_box import InputBox
+from ui.layout import Layout
+from ui.piece_renderer import PieceRenderer
 from ui.popup import Popup
 from ui.slider import Slider
-from ui.input_box import InputBox
-from ui.button import Button
-from ui.piece_renderer import PieceRenderer
-from ui import theme
 
 
-class DeployScreen:
+class DeployScreen(BaseScreen):
     DEPLOY_WIDTH = 2
+    MIN_CELL_SIZE = 50
+    MAX_CELL_SIZE = 80
 
     def __init__(self, screen_manager, screen, context=None):
+        super().__init__(screen_manager, screen, context)
+
         self.finish_button = None
         self.troop_buttons = None
-        self.sm = screen_manager
-        self.screen = screen
-        self.game_state = context
 
         self.layout = Layout(screen)
 
@@ -39,6 +40,8 @@ class DeployScreen:
 
         self.confirm_popup_button = None
         self.cancel_popup_button = None
+        self.delete_popup_button = None
+        self.editing_piece = None
 
         self.build_ui()
 
@@ -54,13 +57,13 @@ class DeployScreen:
         self.build_finish_button()
 
     def build_grid(self):
-
         board = self.game_state.board
 
         available_width = self.layout.width(0.65)
         available_height = self.layout.height(0.75)
 
-        cell_size = min(available_width / self.DEPLOY_WIDTH, available_height / board.height)
+        cell_size = max(self.MIN_CELL_SIZE,
+                        min(self.MAX_CELL_SIZE, available_width / self.DEPLOY_WIDTH, available_height / board.height))
 
         grid_width = self.DEPLOY_WIDTH
         grid_height = board.height
@@ -68,13 +71,16 @@ class DeployScreen:
         grid_x = self.layout.x(0.30)
         grid_y = self.layout.y(0.15)
 
-        self.grid = Grid(grid_x, grid_y, grid_width, grid_height, cell_size)
+        viewport = pygame.Rect(int(grid_x), int(grid_y), int(grid_width * cell_size + Grid.SCROLLBAR_SIZE),
+                               int(available_height))
+
+        self.grid = Grid(grid_x, grid_y, grid_width, grid_height, cell_size, viewport=viewport)
 
     def build_troop_buttons(self):
 
         self.troop_buttons = []
 
-        selected = getattr(self.current_player, "troops_selected", {})
+        selected = self.current_player.army_selection
 
         y = self.layout.y(0.20)
 
@@ -124,9 +130,7 @@ class DeployScreen:
         self.selected_troop_key = troop_key
 
     def get_total_selected(self, troop_key):
-        selected = getattr(self.current_player, "troops_selected", {})
-
-        return selected.get(troop_key, 0)
+        return self.current_player.army_selection.get(troop_key, 0)
 
     def get_deployed_units(self, troop_key):
 
@@ -156,11 +160,9 @@ class DeployScreen:
         return max(0, selected - deployed)
 
     def all_units_deployed(self):
-
-        selected = getattr(self.current_player, "troops_selected", {})
+        selected = self.current_player.army_selection
 
         for troop_key, amount in selected.items():
-
             if self.get_available_units(troop_key) > 0:
                 return False
 
@@ -189,30 +191,32 @@ class DeployScreen:
     # ==========================================================
 
     def open_deploy_popup(self, visual_cell):
-
-        if self.selected_troop_key is None:
-            return
-
         visual_x, visual_y = visual_cell
 
         board_x, board_y = self.visual_to_board(visual_x, visual_y)
 
         board = self.game_state.board
 
-        # Validació zona
-        if self.current_player.id == 1:
+        # Comprovar si ja hi ha una peça a la casella.
+        piece = board.get_piece(board_x, board_y)
 
+        if piece is not None:
+            # Només podem editar peces del jugador actual.
+            if piece.player == self.current_player:
+                self.open_edit_popup(piece)
+            return
+
+        # A partir d'aquí, la casella és buida.
+        if self.selected_troop_key is None:
+            return
+
+        # Validar la zona de desplegament.
+        if self.current_player.id == 1:
             if board_x >= self.DEPLOY_WIDTH:
                 return
-
         else:
-
-            if board_x < (board.width - self.DEPLOY_WIDTH):
+            if board_x < board.width - self.DEPLOY_WIDTH:
                 return
-
-        # Casella ocupada
-        if board.get_piece(board_x, board_y) is not None:
-            return
 
         available = self.get_available_units(self.selected_troop_key)
 
@@ -221,36 +225,37 @@ class DeployScreen:
 
         troop = Troop(self.selected_troop_key)
 
-        # Popup
-        self.popup = Popup(self.screen, title=f"Desplegar {troop.name}")
+        self.editing_piece = None
 
+        self.popup = Popup(self.screen, title=f"Desplegar {troop.name}")
         self.popup.open()
 
         popup_rect = self.popup.rect
 
-        # Slider
-        self.slider = Slider(popup_rect.x + 40, popup_rect.y + 125, popup_rect.width - 80, minimum=0, maximum=available,
+        self.slider = Slider(popup_rect.x + 40, popup_rect.y + 125, popup_rect.width - 80, minimum=1, maximum=available,
                              value=1)
 
-        # Input
-        self.amount_input = InputBox(popup_rect.x + 130, popup_rect.y + 165, 190, 45, text="1", minimum=0,
+        self.amount_input = InputBox(popup_rect.x + 130, popup_rect.y + 165, 190, 45, text="1", minimum=1,
                                      maximum=available)
 
-        # Botons
         self.confirm_popup_button = Button(popup_rect.x + 35, popup_rect.bottom - 55, 150, 40, "CONFIRMAR",
                                            lambda: self.confirm_deployment(board_x, board_y))
 
         self.cancel_popup_button = Button(popup_rect.x + 215, popup_rect.bottom - 55, 150, 40, "CANCEL·LAR",
                                           self.close_popup)
 
-    def close_popup(self):
+        self.delete_popup_button = None
 
+    def close_popup(self):
         self.popup = None
         self.slider = None
         self.amount_input = None
 
         self.confirm_popup_button = None
         self.cancel_popup_button = None
+        self.delete_popup_button = None
+
+        self.editing_piece = None
 
     def confirm_deployment(self, x, y):
 
@@ -349,41 +354,28 @@ class DeployScreen:
     # ==========================================================
 
     def handle_event(self, event):
-
         if event.type == pygame.VIDEORESIZE:
             self.on_resize(event.w, event.h)
             return
 
-        # --------------------------------------------------
-        # Popup
-        # --------------------------------------------------
-
         if self.popup is not None:
             self.handle_popup_event(event)
-
             return
 
-        # --------------------------------------------------
-        # Tropes
-        # --------------------------------------------------
+        # Barres de desplaçament del tauler
+        if self.grid.handle_event(event):
+            return
 
         for _, button in self.troop_buttons:
             button.handle_event(event)
 
         self.finish_button.handle_event(event)
 
-        # --------------------------------------------------
-        # Grid
-        # --------------------------------------------------
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            cell = self.grid.get_cell_at(event.pos)
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-
-            if event.button == 1:
-
-                cell = self.grid.get_cell_at(event.pos)
-
-                if cell is not None:
-                    self.open_deploy_popup(cell)
+            if cell is not None:
+                self.open_deploy_popup(cell)
 
     def handle_popup_event(self, event):
 
@@ -398,7 +390,6 @@ class DeployScreen:
 
             if self.slider.handle_event(event):
                 self.amount_input.set_value(self.slider.value)
-
                 return
 
         # ==================================================
@@ -409,11 +400,10 @@ class DeployScreen:
 
             if self.amount_input.handle_event(event):
                 self.slider.set_value(self.amount_input.get_value())
-
                 return
 
         # ==================================================
-        # CONFIRMAR
+        # CONFIRMAR / GUARDAR
         # ==================================================
 
         if self.confirm_popup_button is not None:
@@ -430,17 +420,28 @@ class DeployScreen:
             if self.cancel_popup_button.handle_event(event):
                 return
 
+        # ==================================================
+        # ELIMINAR PEÇA
+        # ==================================================
+
+        if self.delete_popup_button is not None:
+
+            if self.delete_popup_button.handle_event(event):
+                return
+
     # ==========================================================
     # DRAW
     # ==========================================================
 
     def render(self, screen):
-
         screen.fill(theme.BACKGROUND)
 
         self.draw_header(screen)
         self.draw_troop_panel(screen)
         self.draw_grid(screen)
+
+        self.grid.draw_scrollbars(screen)
+
         self.finish_button.draw(screen)
 
         if self.popup is not None:
@@ -450,14 +451,22 @@ class DeployScreen:
         font = pygame.font.SysFont(theme.FONT_NAME, theme.FONT_TITLE)
 
         title = font.render(f"DESPLEGAMENT - {self.current_player.name}", True, theme.TEXT)
-
         screen.blit(title, (self.layout.x(0.03), self.layout.y(0.04)))
 
-        direction = ("→ DIRECCIÓ ENEMIGA" if self.current_player.id == 1 else "← DIRECCIÓ ENEMIGA")
+        color = theme.PRIMARY_HOVER
+        x = int(self.layout.x(0.60))
+        y = int(self.layout.y(0.065))
 
-        direction_text = font.render(direction, True, theme.PRIMARY_HOVER)
+        direction_text = font.render("DIRECCIÓ ENEMIC", True, color)
+        screen.blit(direction_text, (x, self.layout.y(0.04)))
 
-        screen.blit(direction_text, (self.layout.x(0.60), self.layout.y(0.04)))
+        # Fletxa cap a la dreta
+        start = (x + direction_text.get_width() + 12, y)
+        end = (start[0] + 35, y)
+
+        pygame.draw.line(screen, color, start, end, 3)
+        pygame.draw.line(screen, color, end, (end[0] - 9, end[1] - 7), 3)
+        pygame.draw.line(screen, color, end, (end[0] - 9, end[1] + 7), 3)
 
     def draw_troop_panel(self, screen):
 
@@ -478,40 +487,125 @@ class DeployScreen:
             screen.blit(text, (button.rect.x, button.rect.bottom + 3))
 
     def draw_grid(self, screen):
-
         board = self.game_state.board
 
-        # Pintar zona de desplegament
+        old_clip = screen.get_clip()
+        screen.set_clip(self.grid.content_rect)
+
         for y in range(board.height):
-
             for visual_x in range(self.DEPLOY_WIDTH):
-
                 rect = self.grid.get_cell_rect(visual_x, y)
+
+                if not self.grid.content_rect.colliderect(rect):
+                    continue
 
                 zone_color = (theme.DEPLOY_PLAYER_1 if self.current_player.id == 1 else theme.DEPLOY_PLAYER_2)
 
                 pygame.draw.rect(screen, zone_color, rect)
-
                 pygame.draw.rect(screen, theme.GRID_BORDER, rect, 1)
 
-                board_x, board_y = (self.visual_to_board(visual_x, y))
-
+                board_x, board_y = self.visual_to_board(visual_x, y)
                 piece = board.get_piece(board_x, board_y)
 
                 if piece is not None:
                     PieceRenderer.draw(screen, rect, piece, self.grid.cell_size)
 
+        screen.set_clip(old_clip)
+
+    def get_available_for_edit(self, piece):
+        total = self.get_total_selected(piece.troop.key)
+
+        deployed_elsewhere = sum(other.count for other in self.current_player.pieces if
+                                 other is not piece and other.troop.key == piece.troop.key)
+
+        return max(0, total - deployed_elsewhere)
+
+    def confirm_edit(self):
+        piece = self.editing_piece
+
+        if piece is None or self.amount_input is None:
+            return
+
+        amount = self.amount_input.get_value()
+        maximum = self.get_available_for_edit(piece)
+
+        if amount < 1 or amount > maximum:
+            return
+
+        # Només canvia la quantitat.
+        # La peça manté la seva posició al tauler.
+        piece.count = amount
+
+        self.close_popup()
+        self.update_finish_button()
+
+    def delete_editing_piece(self):
+        piece = self.editing_piece
+
+        if piece is None:
+            return
+
+        board = self.game_state.board
+        player = self.current_player
+
+        # Retirar del tauler.
+        if not board.remove_piece(piece):
+            return
+
+        # Retirar de la llista del jugador.
+        if piece in player.pieces:
+            player.pieces.remove(piece)
+
+        self.close_popup()
+        self.update_finish_button()
+
+    def open_edit_popup(self, piece):
+        available = self.get_available_for_edit(piece)
+
+        if available <= 0:
+            return
+
+        self.editing_piece = piece
+
+        self.popup = Popup(self.screen, title=f"Editar {piece.troop.name}")
+        self.popup.open()
+
+        popup_rect = self.popup.rect
+
+        self.slider = Slider(popup_rect.x + 40, popup_rect.y + 125, popup_rect.width - 80, minimum=1, maximum=available,
+                             value=piece.count)
+
+        self.amount_input = InputBox(popup_rect.x + 130, popup_rect.y + 165, 190, 45, text=str(piece.count), minimum=1,
+                                     maximum=available)
+
+        self.confirm_popup_button = Button(popup_rect.x + 35, popup_rect.bottom - 55, 150, 40, "GUARDAR",
+                                           self.confirm_edit)
+
+        self.cancel_popup_button = Button(popup_rect.x + 215, popup_rect.bottom - 55, 150, 40, "CANCEL·LAR",
+                                          self.close_popup)
+
+        self.delete_popup_button = Button(popup_rect.x + 35, popup_rect.bottom - 105, 330, 40, "ELIMINAR PEÇA",
+                                          self.delete_editing_piece)
+
     def draw_popup(self, screen):
 
         self.popup.draw(screen)
 
-        # --------------------------------------------------
-        # Informació
-        # --------------------------------------------------
+        # ==================================================
+        # INFORMACIÓ
+        # ==================================================
 
         font = pygame.font.SysFont(theme.FONT_NAME, theme.FONT_MEDIUM)
 
-        available_text = font.render(f"Disponibles: {self.slider.maximum}", True, theme.TEXT_SECONDARY)
+        if self.editing_piece is not None:
+
+            available = self.get_available_for_edit(self.editing_piece)
+
+            available_text = font.render(f"Disponibles per a aquesta peça: {available}", True, theme.TEXT_SECONDARY)
+
+        else:
+
+            available_text = font.render(f"Disponibles: {self.slider.maximum}", True, theme.TEXT_SECONDARY)
 
         screen.blit(available_text, (self.popup.rect.x + 40, self.popup.rect.y + 75))
 
@@ -519,25 +613,30 @@ class DeployScreen:
 
         screen.blit(value_text, (self.popup.rect.x + 40, self.popup.rect.y + 100))
 
-        # --------------------------------------------------
-        # Slider
-        # --------------------------------------------------
+        # ==================================================
+        # SLIDER
+        # ==================================================
 
         self.slider.draw(screen)
 
-        # --------------------------------------------------
-        # Input
-        # --------------------------------------------------
+        # ==================================================
+        # INPUT
+        # ==================================================
 
         self.amount_input.draw(screen)
 
-        # --------------------------------------------------
-        # Botons
-        # --------------------------------------------------
+        # ==================================================
+        # BOTONS
+        # ==================================================
 
-        self.confirm_popup_button.draw(screen)
+        if self.confirm_popup_button is not None:
+            self.confirm_popup_button.draw(screen)
 
-        self.cancel_popup_button.draw(screen)
+        if self.cancel_popup_button is not None:
+            self.cancel_popup_button.draw(screen)
+
+        if self.delete_popup_button is not None:
+            self.delete_popup_button.draw(screen)
 
     def update_finish_button(self):
 

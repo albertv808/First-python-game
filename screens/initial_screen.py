@@ -1,20 +1,19 @@
 import pygame
 
+from core.player import Player
+from core.game_state import GameState
+from core.board import Board
+
+from screens.base_screen import BaseScreen
+
 from ui.input_box import InputBox
 from ui.button import Button
 from ui.layout import Layout
 from ui import theme
 
-from core.player import Player
-from core.game_state import GameState
-from core.board import Board
-
-
-class InitialScreen:
+class InitialScreen(BaseScreen):
     def __init__(self, screen_manager, screen, context=None):
-        self.sm = screen_manager
-        self.screen = screen
-        self.game_state = context
+        super().__init__(screen_manager, screen, context)
 
         # 📐 layout responsive
         self.layout = Layout(screen)

@@ -1,0 +1,81 @@
+{
+  "damage_types": {
+    "slash": "Slash",
+    "pierce": "Pierce",
+    "blunt": "Blunt"
+  },
+  "attack_type_modifiers": {
+  "melee": 1.0,
+  "ranged": 1.0
+},
+  "damage_modifiers": {
+    "light": 0.8,
+    "medium": 1.0,
+    "heavy": 1.25
+  },
+  "armor": {
+    "unarmored": {
+      "slash": 0.0,
+      "pierce": 0.0,
+      "blunt": 0.0
+    },
+    "gambeson": {
+      "slash": 0.25,
+      "pierce": 0.20,
+      "blunt": 0.30
+    },
+    "leather": {
+      "slash": 0.25,
+      "pierce": 0.10,
+      "blunt": 0.15
+    },
+    "mail": {
+      "slash": 0.65,
+      "pierce": 0.25,
+      "blunt": 0.20
+    },
+    "scale": {
+      "slash": 0.50,
+      "pierce": 0.40,
+      "blunt": 0.25
+    },
+    "lamellar": {
+      "slash": 0.50,
+      "pierce": 0.45,
+      "blunt": 0.30
+    },
+    "brigandine": {
+      "slash": 0.55,
+      "pierce": 0.50,
+      "blunt": 0.35
+    },
+    "plate": {
+      "slash": 0.75,
+      "pierce": 0.55,
+      "blunt": 0.40
+    }
+  },
+  "shields": {
+    "no_shield": {
+      "melee": 0.0,
+      "ranged": 0.0
+    },
+    "small_shield": {
+      "melee": 0.30,
+      "ranged": 0.05
+    },
+    "shield": {
+      "melee": 0.20,
+      "ranged": 0.25
+    },
+    "large_shield": {
+      "melee": 0.15,
+      "ranged": 0.50
+    }
+  },
+  "shield_modifiers": {
+    "light": 0.8,
+    "medium": 1.0,
+    "heavy": 1.2
+  }
+}

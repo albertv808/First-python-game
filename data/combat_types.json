@@ -4,17 +4,21 @@
     "pierce": "Pierce",
     "blunt": "Blunt"
   },
-  "attack_type_modifiers": {
-  "melee": 1.0,
-  "ranged": 1.0
-},
+  "attack_types": {
+    "melee": "Melee",
+    "ranged": "Ranged"
+  },
+    "attack_type_modifiers": {
+    "melee": 1.0,
+    "ranged": 1.0
+  },
   "damage_modifiers": {
     "light": 0.8,
     "medium": 1.0,
     "heavy": 1.25
   },
   "armor": {
-    "unarmored": {
+    "no_armor": {
       "slash": 0.0,
       "pierce": 0.0,
       "blunt": 0.0
@@ -55,6 +59,12 @@
       "blunt": 0.40
     }
   },
+  "armor_modifiers": {
+    "unarmored": 0,
+    "light": 1,
+    "medium": 2,
+    "heavy": 3
+  },
   "shields": {
     "no_shield": {
       "melee": 0.0,
@@ -74,6 +84,7 @@
     }
   },
   "shield_modifiers": {
+    "unshielded": 0.0,
     "light": 0.8,
     "medium": 1.0,
     "heavy": 1.2
